@@ -1,0 +1,145 @@
+...
+# MetricMind Project - Day 2 Plan
+
+## Goal for Day 2
+Yesterday we made fake data. Today we load that data into a real database and start the dbt (data modeling) setup.
+
+---
+
+## Step 1: Install DuckDB (Easiest Option)
+DuckDB is free, needs no server setup, and works like a mini warehouse on your laptop.
+
+```
+pip install duckdb
+```
+
+---
+
+## Step 2: Load CSV into DuckDB
+Use the `load_data.py` script (given separately) to load `sales_data.csv` into a DuckDB database file called `metricmind.duckdb`.
+
+Run it like this:
+```
+python load_data.py
+```
+
+This creates a table called `raw_sales` inside the database.
+
+---
+
+## Step 3: Test Your Data
+Open a Python shell or add a test query in the script to confirm data loaded correctly:
+```sql
+SELECT region, quarter, SUM(revenue) as total_revenue
+FROM raw_sales
+GROUP BY region, quarter
+ORDER BY region, quarter;
+```
+
+If you see totals per region and quarter, your data layer is working.
+
+---
+
+## Step 4: Install dbt (Data Modeling Tool)
+dbt lets you define business logic (like "margin = revenue - material_cost - shipping_cost") as clean, reusable code.
+
+```
+pip install dbt-duckdb
+```
+
+---
+
+## Step 5: Initialize dbt Project
+```
+dbt init metricmind_dbt
+```
+Choose `duckdb` when it asks for a database type, and point it to your `metricmind.duckdb` file.
+
+Inside `metricmind_dbt/models/`, create a file called `stg_sales.sql`:
+```sql
+-- stg_sales.sql
+SELECT
+    order_id,
+    date,
+    region,
+    product_category,
+    revenue,
+    material_cost,
+    shipping_cost,
+    (revenue - material_cost - shipping_cost) AS margin,
+    quarter,
+    year
+FROM raw_sales
+```
+
+Run it:
+```
+dbt run
+```
+
+This creates a clean table called `stg_sales` with margin already calculated — this is the foundation for your Semantic Layer tomorrow.
+
+---
+
+## Day 2 Checklist
+- [ ] Install DuckDB
+- [ ] Load `sales_data.csv` into `raw_sales` table
+- [ ] Run a test SQL query to confirm data is correct
+- [ ] Install dbt-duckdb
+- [ ] Initialize dbt project
+- [ ] Create `stg_sales.sql` model with margin calculation
+- [ ] Run `dbt run` successfully
+- [ ] Commit progress to GitHub (see below)
+
+---
+
+## What to Commit to GitHub Today
+
+Add these files/folders to your repo:
+```
+metricmind/
+├── data/
+│   └── sales_data.csv
+├── scripts/
+│   ├── generate_data.py
+│   └── load_data.py
+├── metricmind_dbt/
+│   ├── models/
+│   │   └── stg_sales.sql
+│   └── dbt_project.yml
+├── .gitignore
+└── README.md
+```
+
+### Suggested .gitignore content
+```
+*.duckdb
+__pycache__/
+*.pyc
+.env
+dbt_packages/
+logs/
+target/
+```
+(We ignore the actual database file since it's just generated data, not source code.)
+
+### Git commands to run
+```bash
+git add .
+git commit -m "Day 2: Load sales data into DuckDB and add dbt staging model with margin calculation"
+git push
+```
+
+### Update your README.md with:
+```markdown
+## Day 2 Progress
+- Loaded mock sales data into DuckDB (`raw_sales` table)
+- Set up dbt project for data modeling
+- Created `stg_sales` model that calculates margin (revenue - material cost - shipping cost)
+- Verified data using test SQL queries
+```
+
+---
+
+## Why This Matters
+Raw data alone is not useful — anyone can make mistakes writing the same calculation differently every time. By putting the margin formula inside a dbt model, everyone (and later, the AI agent) uses the exact same definition. This is the first real step toward "governed" analytics.
