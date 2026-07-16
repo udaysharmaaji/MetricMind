@@ -1,0 +1,192 @@
+MetricMind Project - Day 3 Plan
+
+Goal for Day 3
+
+Yesterday we built the stg_sales model with margin calculated correctly. Today we build the Semantic Layer — the most important part of this whole project. This is the piece that makes your AI trustworthy.
+
+What is a Semantic Layer? (In Simple Words)
+
+Think of it like a dictionary for your company's numbers. Instead of every person (or AI) writing their own formula for "Revenue" or "Margin," we write it ONE time in a special file. Everyone — humans, dashboards, and the AI agent — must use this same definition. No more different numbers for the same question.
+
+We will use Cube.dev (free, open-source) for this.
+
+
+Step 1: Install Cube.dev
+
+You need Node.js installed first (v18 or higher). Then run:
+
+npx cubejs-cli create metricmind_cube -d duckdb
+
+This creates a new folder called metricmind_cube with Cube's starter files.
+
+
+Step 2: Connect Cube to Your DuckDB Database
+
+Open the .env file inside metricmind_cube/ and set:
+
+CUBEJS_DB_TYPE=duckdb
+CUBEJS_DB_DUCKDB_DATABASE_PATH=../metricmind.duckdb
+
+(Adjust the path so it points to the metricmind.duckdb file from Day 2.)
+
+
+Step 3: Define Your Semantic Model (The Important Part)
+
+Inside metricmind_cube/model/cubes/, create a file called sales.yml.
+
+This file below is the actual Cube.dev semantic layer definition file — use it as your model:
+
+yamlcubes:
+  - name: sales
+    sql_table: stg_sales
+
+    dimensions:
+      - name: order_id
+        sql: order_id
+        type: number
+        primary_key: true
+
+      - name: region
+        sql: region
+        type: string
+
+      - name: product_category
+        sql: product_category
+        type: string
+
+      - name: quarter
+        sql: quarter
+        type: string
+
+      - name: year
+        sql: year
+        type: number
+
+      - name: date
+        sql: date
+        type: time
+
+    measures:
+      - name: total_revenue
+        sql: revenue
+        type: sum
+
+      - name: total_material_cost
+        sql: material_cost
+        type: sum
+
+      - name: total_shipping_cost
+        sql: shipping_cost
+        type: sum
+
+      - name: total_margin
+        sql: margin
+        type: sum
+
+      - name: order_count
+        sql: order_id
+        type: count
+
+What this file does:
+
+
+dimensions = things you can group or filter by (region, quarter, category, date)
+measures = numbers you can calculate (total revenue, total margin, order count)
+This file is the single source of truth. No matter who asks "what is total margin," the answer always comes from this exact formula.
+
+
+
+Step 4: Start Cube.dev
+
+cd metricmind_cube
+npm run dev
+
+This starts the Cube API and a Playground UI at http://localhost:4000.
+
+
+Step 5: Test the Semantic Layer
+
+In the Cube Playground, try asking for:
+
+
+sales.total_revenue grouped by sales.region
+sales.total_margin grouped by sales.quarter
+
+
+Check the JSON response tab. Confirm it returns clean, correct JSON like this:
+
+json{
+  "data": [
+    { "sales.region": "Europe", "sales.total_revenue": "125430.50" },
+    { "sales.region": "Asia", "sales.total_revenue": "98120.75" },
+    { "sales.region": "US", "sales.total_revenue": "110200.10" }
+  ]
+}
+
+This proves your Semantic Layer works — it always gives the same number for "European revenue," no matter who asks or how many times.
+
+
+Day 3 Checklist
+
+
+ Install Node.js (if not already installed)
+ Create Cube.dev project (metricmind_cube)
+ Connect Cube to metricmind.duckdb
+ Create sales.yml with dimensions and measures
+ Start Cube dev server (npm run dev)
+ Test queries in Cube Playground
+ Confirm JSON output is clean and correct
+ Commit progress to GitHub (see below)
+
+
+
+What to Commit to GitHub Today
+
+Folder structure should now look like:
+
+metricmind/
+├── data/
+│   └── sales_data.csv
+├── scripts/
+│   ├── generate_data.py
+│   └── load_data.py
+├── metricmind_dbt/
+│   └── models/
+│       └── stg_sales.sql
+├── metricmind_cube/
+│   ├── model/
+│   │   └── cubes/
+│   │       └── sales.yml
+│   └── .env.example        <- (never commit real .env, just an example)
+├── .gitignore
+└── README.md
+
+Add to your .gitignore
+
+node_modules/
+.env
+
+Create a .env.example file (safe to commit, no real paths/secrets)
+
+CUBEJS_DB_TYPE=duckdb
+CUBEJS_DB_DUCKDB_DATABASE_PATH=../metricmind.duckdb
+
+Git commands to run
+
+bashgit add .
+git commit -m "Day 3: Add Cube.dev semantic layer with sales cube (dimensions, measures) and verified JSON API output"
+git push
+
+Update your README.md with:
+
+markdown## Day 3 Progress
+- Set up Cube.dev as the Semantic Layer
+- Defined the `sales` cube with dimensions (region, quarter, category, date) 
+  and measures (total_revenue, total_margin, total_shipping_cost, order_count)
+- Verified Cube Playground returns consistent, correct JSON for metric queries
+- This is the layer the AI agent will query in Day 4 instead of writing raw SQL
+
+
+Why This Matters
+
+This is the step that solves the "AI hallucination" problem from your project document. Because the AI agent (which we build tomorrow) will NEVER write its own SQL. It will only ask this Semantic Layer for numbers using safe, pre-defined measures. That means Finance and Sales will always see the exact same numbers — which is the whole point of MetricMind.
